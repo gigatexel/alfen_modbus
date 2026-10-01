@@ -62,6 +62,21 @@ Note: this is install the source version, not this branch.
 3. Search for **Alfen Modbus**
 4. Enter your charger's IP address and port (default: 502)
 
+### Polling intervals
+
+| Option | Reads | Default |
+|--------|-------|---------|
+| **Scan Interval** | Energy totals, apparent/reactive power, station data and clock | 30 s |
+| **Measurement Interval** | Power, current, voltage, meter state, mode 3 state and setpoint | Scan interval |
+
+For load balancing, set the **Measurement Interval** to 2-5 s. A load balancer that
+subtracts the charger power from a grid meter otherwise works with a charger value
+up to one scan interval old, and sees phantom headroom after every current change.
+A measurement read is 62 registers in 2 requests per socket. The product
+identification is read at setup (HA startup and integration reload) and again
+when the charger restarts. Both options can be changed later under
+**Configure**.
+
 ## Enabling Modbus on Alfen Charger
 
 1. Acquire the **Active Load Balancing** license from Alfen
@@ -100,6 +115,13 @@ See the [Alfen Smart Charging Manual](https://knowledge.alfen.com/space/IN/63976
 Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## Changelog
+
+### v1.1.0
+
+- **Measurement interval** - Power, current, voltage and charger state can be polled faster than the energy totals, for load balancing
+- **Lighter polling** - Product identification is read at setup and when the charger restarts (for example after a firmware update) instead of every poll
+- **Meter reading age** - Now decoded as one 64-bit value and shown in seconds (it showed a list of four numbers)
+- **No read backlog** - A timer tick is skipped while the previous read still runs
 
 ### v1.0.0
 

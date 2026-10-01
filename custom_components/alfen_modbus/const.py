@@ -11,6 +11,10 @@ ATTR_MANUFACTURER = "Alfen"
 CONF_MODBUS_ADDRESS = "modbus_address"
 CONF_READ_SCN = "read_scn"
 CONF_READ_SOCKET2 = "read_socket_2"
+# Polling interval for the live measurements (power, current, voltage, mode 3
+# state, setpoint). Load balancing needs these fresh; the rest of the registers
+# keep the slower scan_interval. Defaults to scan_interval: no change unless set.
+CONF_MEASUREMENT_INTERVAL = "measurement_interval"
 
 VALID_TIME_S = "maxCurrentValidTime_socket_"
 MAX_CURRENT_S = "maxCurrent_socket_"

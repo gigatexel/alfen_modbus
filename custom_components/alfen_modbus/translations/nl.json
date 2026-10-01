@@ -10,7 +10,8 @@
 	    	  "modbus_address": "Modbus adres",
           "read_scn": "Lees SCN (Smart Charging Network) data",
           "read_socket_2": "Lees 2e socket data",
-          "scan_interval": "De polling-frequentie van de modbus registratie in seconden"
+          "scan_interval": "De polling-frequentie van de modbus registratie in seconden",
+          "measurement_interval": "Meetinterval in seconden voor vermogen, stroom, spanning en laadstatus (2-5 s voor load balancing)"
         }
       }
     },

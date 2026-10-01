@@ -10,7 +10,8 @@
 		  "modbus_address": "Modbus-Adresse",
           "read_meter_1": "Lese die Stände des Zähler 1 (nur für Modelle mit Zähler)",
           "read_meter_2": "Lese die Stände des Zähler 2 (nur für Modelle mit Zähler)",
-          "scan_interval": "Das Abfrageintervall der modbus Register in Sekunden"
+          "scan_interval": "Das Abfrageintervall der modbus Register in Sekunden",
+          "measurement_interval": "Messintervall in Sekunden für Leistung, Strom, Spannung und Ladestatus (2-5 s für Lastmanagement)"
         }
       }
     },
