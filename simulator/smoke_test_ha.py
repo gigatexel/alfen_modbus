@@ -99,20 +99,19 @@ class SmokeTestResult:
 
 async def test_product_data(client, unit, result):
     """
-    Tests read_modbus_data_product() - Registers 100-178 (79 registers)
-    
-    This is called from: read_modbus_data_product() in __init__.py
+    Tests read_modbus_data_product() - Registers 100-167 (68 registers, at setup)
+    and read_modbus_data_station_time() - Registers 168-178 (11 registers)
     """
-    log.info("\n=== Test: Product Data (Unit %d, Registers 100-178) ===" % unit)
-    
-    rr = await client.read_holding_registers(100, count=79, device_id=unit)
+    log.info("\n=== Test: Product Data (Unit %d, Registers 100-167 and 168-178) ===" % unit)
+
+    rr = await client.read_holding_registers(100, count=68, device_id=unit)
     if rr.isError():
         log.error(f"Failed to read product data: {rr}")
         result.failed += 1
         return
-    
+
     regs = rr.registers
-    
+
     # Decode exactly as HA component does
     name = decode_string(regs, 0, 17)
     manufacturer = decode_string(regs, 17, 5)
@@ -120,16 +119,23 @@ async def test_product_data(client, unit, result):
     firmware_version = decode_string(regs, 23, 17)
     platform_type = decode_string(regs, 40, 17)
     serial = decode_string(regs, 57, 11)
-    
+
+    rt = await client.read_holding_registers(168, count=11, device_id=unit)
+    if rt.isError():
+        log.error(f"Failed to read station time: {rt}")
+        result.failed += 1
+        return
+    tregs = rt.registers
+
     # Time fields
-    year = decode_int16(regs, 68)
-    month = decode_int16(regs, 69)
-    day = decode_int16(regs, 70)
-    hour = decode_int16(regs, 71)
-    minute = decode_int16(regs, 72)
-    second = decode_int16(regs, 73)
-    uptime = decode_uint64(regs, 74)
-    utc_offset = decode_int16(regs, 78)
+    year = decode_int16(tregs, 0)
+    month = decode_int16(tregs, 1)
+    day = decode_int16(tregs, 2)
+    hour = decode_int16(tregs, 3)
+    minute = decode_int16(tregs, 4)
+    second = decode_int16(tregs, 5)
+    uptime = decode_uint64(tregs, 6)
+    utc_offset = decode_int16(tregs, 10)
     
     log.info(f"  Name: '{name}'")
     log.info(f"  Manufacturer: '{manufacturer}'")
@@ -185,24 +191,26 @@ async def test_station_data(client, unit, result):
 
 async def test_socket_energy_data(client, socket_id, result):
     """
-    Tests read_modbus_data_socket() - Registers 300-424 (125 registers)
-    
-    This is called from: read_modbus_data_socket() in __init__.py
+    Tests read_modbus_data_socket() - Registers 300-345 (46 registers, measurement interval)
+    and read_modbus_data_socket_totals() - Registers 346-424 (79 registers, scan interval)
+
     Socket 1 uses unit=1, Socket 2 uses unit=2
     """
-    log.info("\n=== Test: Socket %d Energy Data (Unit %d, Registers 300-424) ===" % (socket_id, socket_id))
-    
-    rr = await client.read_holding_registers(300, count=125, device_id=socket_id)
-    if rr.isError():
-        log.error(f"Failed to read socket {socket_id} energy data: {rr}")
+    log.info("\n=== Test: Socket %d Energy Data (Unit %d, Registers 300-345 and 346-424) ===" % (socket_id, socket_id))
+
+    rr = await client.read_holding_registers(300, count=46, device_id=socket_id)
+    rt = await client.read_holding_registers(346, count=79, device_id=socket_id)
+    if rr.isError() or rt.isError():
+        log.error(f"Failed to read socket {socket_id} energy data: {rr} / {rt}")
         result.failed += 1
         return
-    
-    regs = rr.registers
-    
+
+    # One list with offsets from register 300, as the HA component pads it
+    regs = list(rr.registers) + list(rt.registers)
+
     # Decode exactly as HA component does (offsets from register 300)
     meter_state = decode_uint16(regs, 0)
-    meter_age = decode_uint16(regs, 1)  # Actually UINT16 for first part
+    meter_age = decode_uint64(regs, 1)  # ms, one UINT64 over 4 registers
     meter_type = decode_uint16(regs, 5)
     
     v_l1n = round(decode_float32(regs, 6), 2)
@@ -234,6 +242,7 @@ async def test_socket_energy_data(client, socket_id, result):
     e_delivered_sum = round(decode_float64(regs, 74), 2)
     
     log.info(f"  Meter State: {meter_state}")
+    log.info(f"  Meter Age: {meter_age}ms")
     log.info(f"  Voltages L-N: {v_l1n}V, {v_l2n}V, {v_l3n}V")
     log.info(f"  Voltages L-L: {v_l1l2}V, {v_l2l3}V, {v_l3l1}V")
     log.info(f"  Currents: N={i_n}A, L1={i_l1}A, L2={i_l2}A, L3={i_l3}A, Sum={i_sum}A")
@@ -244,6 +253,7 @@ async def test_socket_energy_data(client, socket_id, result):
     
     # Validations
     result.check("Meter State defined", meter_state in range(16))
+    result.check_range("Meter Age (ms)", meter_age, 0, 60000)
     result.check_range("Voltage L1-N", v_l1n, 200, 260)
     result.check_range("Voltage L2-N", v_l2n, 200, 260)
     result.check_range("Voltage L3-N", v_l3n, 200, 260)
